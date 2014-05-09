@@ -117,6 +117,14 @@ public final class HttpEngine {
    */
   public final boolean bufferRequestBody;
 
+  /**
+   * True if this connection ever intends to do output. This is necessary
+   * because we don't see the actual body until after we've established
+   * the connection and sent up headers, but those headers depend on
+   * whether or not there will ever be a body.
+   */
+  private boolean willHaveRequestBody;
+
   private Request originalRequest;
   private Request request;
   private Sink requestBodyOut;
@@ -152,12 +160,14 @@ public final class HttpEngine {
    *     immediately preceding this attempt, or null if this request doesn't
    *     recover from a failure.
    */
-  public HttpEngine(OkHttpClient client, Request request, boolean bufferRequestBody,
+  public HttpEngine(OkHttpClient client, Request request, boolean willHaveRequestBody, boolean bufferRequestBody,
       Connection connection, RouteSelector routeSelector, RetryableSink requestBodyOut,
       Response redirectedBy) {
     this.client = client;
     this.originalRequest = request;
     this.request = request;
+
+    this.willHaveRequestBody = willHaveRequestBody;
     this.bufferRequestBody = bufferRequestBody;
     this.connection = connection;
     this.routeSelector = routeSelector;
@@ -291,7 +301,7 @@ public final class HttpEngine {
   }
 
   boolean hasRequestBody() {
-    return HttpMethod.hasRequestBody(request.method()) && !Util.emptySink().equals(requestBodyOut);
+    return HttpMethod.hasRequestBody(request.method()) && willHaveRequestBody && !Util.emptySink().equals(requestBodyOut);
   }
 
   /** Returns the request body or null if this request doesn't have a body. */
@@ -366,7 +376,7 @@ public final class HttpEngine {
     Connection connection = close();
 
     // For failure recovery, use the same route selector with a new connection.
-    return new HttpEngine(client, originalRequest, bufferRequestBody, connection, routeSelector,
+    return new HttpEngine(client, originalRequest, willHaveRequestBody, bufferRequestBody, connection, routeSelector,
         (RetryableSink) requestBodyOut, redirectedBy);
   }
 
