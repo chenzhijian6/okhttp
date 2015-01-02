@@ -80,7 +80,7 @@ public final class ConnectionPool {
   private final LinkedList<Connection> connections = new LinkedList<Connection>();
 
   /** We use a single background thread to cleanup expired connections. */
-  private final ExecutorService executorService = new ThreadPoolExecutor(0, 1,
+  private static final ExecutorService executorService = new ThreadPoolExecutor(0, 1,
       60L, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(),
       Util.threadFactory("OkHttp ConnectionPool", true));
   private final Runnable connectionsCleanupRunnable = new Runnable() {
